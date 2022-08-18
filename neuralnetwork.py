@@ -1,14 +1,15 @@
 from cmath import tanh, cosh
-import enum
 import random
 
 class Neuron():
-    def __init__(self, bias = 0, numInputs = 0):
+    def __init__(self, idx, bias = 0, numInputs = 0):
+        self.id = idx
         self.bias = bias
         self.numInputs = numInputs
         self.inputs = [0 for _ in range(numInputs)]
         self.weights = [random.uniform(-1, 1) for _ in range(numInputs)]
         self.grad = [0 for _ in range(numInputs)]
+        self.definitionGrad = [0 for _ in range(numInputs)]
         self.biasGrad = 0
         self.stimulus = 0
     
@@ -24,25 +25,29 @@ class Neuron():
         return tanh(stimulus).real
 
     def activationDerivative(self, stimulus):
-        return 1 / (cosh(stimulus) ** 2)
+        return 1 / (cosh(stimulus).real ** 2)
     
     def fire(self, inputSignals):
         self.stimulus = 0
         for i, inSig in enumerate(inputSignals):
+            self.inputs[i] = inSig
             self.stimulus += inSig * self.weights[i]
         self.stimulus += self.bias
         return self.activationFunction(self.stimulus)
-
-    def learn(self):
-        for i in range(len(self.weights)):
-            self.weights[i] += self.grad[i]
-        self.bias += self.biasGrad
     
     def applyGradients(self, learnRate):
-        for i, weight in enumerate(self.weights):
-            weight += self.grad[i] * learnRate
-        self.bias += self.biasGrad * learnRate
-    
+        #print(self.id)
+        #for w in self.weights:
+        #    print(w)
+        
+        for i in range(len(self.weights)):
+            #print("GRAD", self.grad[i])
+            self.weights[i] -= self.grad[i] * learnRate
+        self.bias -= self.biasGrad * learnRate
+
+    def zeroGradients(self):
+        self.grad = [0 for _ in range(self.numInputs)]
+        self.biasGrad = 0
     
 class Layer():
     def __init__(self, numInNeurons, size):
@@ -58,8 +63,9 @@ class Layer():
         return '\n'.join(out)
     
     def initNeurons(self):
-        for _ in range(self.size):
-            self.neurons.append(Neuron(0, self.numInNeurons))
+        seed = random.randint(0, 10000)
+        for k in range(self.size):
+            self.neurons.append(Neuron(seed + k, 0, self.numInNeurons))
         
     def classify(self, inputSignals):
         assert(len(inputSignals) == self.numInNeurons)
@@ -67,7 +73,11 @@ class Layer():
     
     def applyGradients(self, learnRate):
         for neuron in self.neurons:
-            neuron.applyGradient(learnRate)
+            neuron.applyGradients(learnRate)
+    
+    def zeroGradients(self):
+        for neuron in self.neurons:
+            neuron.zeroGradients()
     
 class Brain():
     def __init__(self, sizes):
@@ -97,33 +107,78 @@ class Brain():
         return feedForward
     
     def lossFunction(self, prediction, truth):
+        #print(prediction, truth)
         return (prediction - truth) ** 2
     
     def lossDerivative(self, prediction, truth):
+        #print(prediction, truth)
         return 2 * (prediction - truth)
 
-    def getLoss(self, predictions, truth):
-        loss = [self.lossFunction(predictions[i], truth[i]) for i in range(len(predictions))]
+    def getLoss(self, prediction, truth):
+        loss = [0 for _ in range(len(prediction))]
+        #print(prediction, truth)
+        for i in range(len(prediction)):
+            loss[i] = self.lossFunction(prediction[i], truth[i])
+        
         return loss
     
-    def backPropagate(self, predictions, loss):
+    def getGradByDefinition(self, xs, ys):
+        h = 0.0001
+        totLoss = 0
+        for layerIdx in range(len(self.layers)):
+            for neuronIdx in range(self.layers[layerIdx].size):
+                for i in range(len(xs)):
+                    for weightIdx in range(self.layers[layerIdx].neurons[neuronIdx].numInputs):
+                        ypred = self.classify(xs[i])
+                        loss = self.getLoss(ypred, ys[i])
+                        totLossf = self.sumLossOverAllXs(loss)
+                        totLoss += totLossf
+                
+                        self.layers[layerIdx].neurons[neuronIdx].weights[weightIdx] += h
+                        ypred2 = self.classify(xs[i])
+                        self.layers[layerIdx].neurons[neuronIdx].weights[weightIdx] -= h
+                        loss = self.getLoss(ypred2, ys[i])
+                        totLossfplush = self.sumLossOverAllXs(loss)
+                        self.layers[layerIdx].neurons[neuronIdx].grad[weightIdx] += (totLossfplush - totLossf) / h
+                    
+                    ypred = self.classify(xs[i])
+                    loss = self.getLoss(ypred, ys[i])
+                    totLossf = self.sumLossOverAllXs(loss)
+                    totLoss += totLossf
+            
+                    self.layers[layerIdx].neurons[neuronIdx].bias += h
+                    ypred2 = self.classify(xs[i])
+                    self.layers[layerIdx].neurons[neuronIdx].bias -= h
+                    loss = self.getLoss(ypred2, ys[i])
+                    totLossfplush = self.sumLossOverAllXs(loss)
+                    self.layers[layerIdx].neurons[neuronIdx].biasGrad += (totLossfplush - totLossf) / h
+
+        return totLoss
+    
+    def backPropagate(self, prediction, loss):
+        #print("PRED", prediction)
+        #print("LOSS", loss)
+        #print()
         dpWeights = self.getWeightsBetweenLayers(self.layers[-1], self.layers[-2])
         DP = [0 for _ in range(self.layers[-1].size)]
         for i, neuron in enumerate(self.layers[-1].neurons):
-            DP[i] = self.lossDerivative(predictions[i], loss[i]) * neuron.activationDerivative(neuron.stimulus)
+            DP[i] = self.lossDerivative(prediction[i], loss[i]) * neuron.activationDerivative(neuron.stimulus)
         
         for i in range(len(self.layers) - 2, -1, -1):
             DP2 = [0 for _ in range(self.layers[i].size)]
-            for j, neuron in enumerate(self.layers[i].neurons):
+            for j in range(len(self.layers[i].neurons)):
                 for k in range(self.layers[i+1].size):
                     DP2[j] += DP[k] * dpWeights[j][k]
-                DP2[j] *= neuron.activationDerivative(neuron.stimulus)
+                DP2[j] *= self.layers[i].neurons[j].activationDerivative(self.layers[i].neurons[j].stimulus)
                 
                 # Update grad for neuron weights
-                for k in range(neuron.numInputs):
-                    neuron.grad[k] = DP2[j] * neuron.inputs[k]
-                neuron.biasGrad = DP2[j]
+                for k in range(self.layers[i].neurons[j].numInputs):
+                    self.layers[i].neurons[j].grad[k] += DP2[j] * self.layers[i].neurons[j].inputs[k]
+                    #print("LPLPL", self.layers[i].neurons[j].inputs[k])
+                self.layers[i].neurons[j].biasGrad += DP2[j]
+            #print("DP", DP)
             DP = DP2
+            
             
             if i > 0:
                 dpWeights = self.getWeightsBetweenLayers(self.layers[i], self.layers[i-1])
@@ -137,23 +192,54 @@ class Brain():
     
     def applyGradients(self, learnRate):
         for layer in self.layers:
-            layer.applyGradient(learnRate)
+            layer.applyGradients(learnRate)
     
-    def train(self, runs, xs, ys):
-        loss = []
+    def zeroGradients(self):
+        for layer in self.layers:
+            layer.zeroGradients()
+            
+    def sumLossOverAllXs(self, loss):
+        tot = 0
+        for i in range(len(loss)):
+            tot += loss[i]
+        return tot
+    
+    def printOut(self, out):
+        for row in out:
+            for num in row:
+                print(round(num, 3), end=" ")
+            print()
+
+    def learn(self, runs, xs, ys):
         for _ in range(runs):
             ypred = [self.classify(x) for x in xs]
-            loss = self.getLoss(ypred, ys)
-            print(sum(loss), loss)
-
-            self.backPropagate(ypred, loss)
-
-            self.applyGradients(0.1)
-        
-        print(sum(loss), ys, ypred)            
+            #loss = self.getLoss(ypred, ys)
+            # loss: [[4, 2], [2, 5], [2, 1]]
             
-    
-    
+            totLoss = self.getGradByDefinition(xs, ys)
+            print(totLoss)
+                
+            #for i in range(len(ypred)):
+            #    self.backPropagate(ypred[i], loss[i])
+
+            self.applyGradients(0.05)
+            self.zeroGradients()
+            
+            #print(self.sumLossOverAllXs(loss))
+            self.printOut(ypred)
+            
 #l1 = Layer(2, 3)
 #print(l1)
 #print(l1.classify([1, 2]))
+
+b = Brain([3, 4, 4, 2])
+xs = [
+    [2.0, 3.0, -1.0],
+    [2.0, -1.0, 0.5],
+    [0.5, 1.0, 1.0],
+    [1.0, 1.0, -1.0]
+]
+
+ys = [[1, 0], [0, 1], [0, 1], [1, 0]]
+
+b.learn(50000, xs, ys)
