@@ -26,14 +26,14 @@ class Neuron():
         return self.activationFunction(stimulus)
 
 class Layer():
-    def __init__(self, size, numInNeurons):
+    def __init__(self, numInNeurons, size):
         self.size = size
         self.numInNeurons = numInNeurons
         self.neurons = []
         self.initNeurons()
     
     def __str__(self):
-        out = []
+        out = ["Layer with {} inputs and {} outputs:".format(self.numInNeurons, self.size)]
         for neuron in self.neurons:
             out.append(neuron.__str__())
         return '\n'.join(out)
@@ -46,7 +46,36 @@ class Layer():
         assert(len(inputSignals) == self.numInNeurons)
         return [neuron.fire(inputSignals) for neuron in self.neurons]
     
+class Brain():
+    def __init__(self, sizes):
+        self.layers = []
+        self.sizes = sizes
+        self.initLayers()
+        
+    def __str__(self):
+        
+        out = ["Brain: "]
+        for layer in self.layers:
+            out.append(layer.__str__())
+        return '\n'.join(out)
+            
+    def initLayers(self):
+        inputs = self.sizes[0]
+        for i in range(1, len(self.sizes)):
+            outputs = self.sizes[i]
+            self.layers.append(Layer(inputs, outputs))
+            inputs = outputs
+    
+    def classify(self, inputSignals):
+        feedForward = inputSignals
+        for layer in self.layers:
+            feedForward = layer.classify(feedForward)
+        return feedForward
+    
+#l1 = Layer(2, 3)
+#print(l1)
+#print(l1.classify([1, 2]))
 
-l1 = Layer(3, 2)
-print(l1)
-print(l1.classify([1, 2]))
+b = Brain([2, 3, 3, 2])
+print(b)
+print(b.classify([1, 2]))
