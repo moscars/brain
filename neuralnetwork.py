@@ -13,9 +13,10 @@ class Neuron():
         out += "Weights:\n"
         for weight in self.weights:
             out += str(weight) + "\n"
+        return out
         
     def activationFunction(self, stimulus):
-        return tanh(stimulus)
+        return tanh(stimulus).real
     
     def fire(self, inputSignals):
         stimulus = 0
@@ -25,23 +26,27 @@ class Neuron():
         return self.activationFunction(stimulus)
 
 class Layer():
-    def __init__(self, size, numInNeurons, numOutNeurons):
+    def __init__(self, size, numInNeurons):
         self.size = size
         self.numInNeurons = numInNeurons
-        self.numOutNeurons = numOutNeurons
         self.neurons = []
         self.initNeurons()
     
     def __str__(self):
         out = []
         for neuron in self.neurons:
-            out.append(neuron.__str__)
+            out.append(neuron.__str__())
         return '\n'.join(out)
     
     def initNeurons(self):
-        for _ in range(self.numOutNeurons):
+        for _ in range(self.size):
             self.neurons.append(Neuron(0, self.numInNeurons))
         
     def classify(self, inputSignals):
         assert(len(inputSignals) == self.numInNeurons)
         return [neuron.fire(inputSignals) for neuron in self.neurons]
+    
+
+l1 = Layer(3, 2)
+print(l1)
+print(l1.classify([1, 2]))
