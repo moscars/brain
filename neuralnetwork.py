@@ -1,5 +1,6 @@
 from cmath import tanh, cosh
 import random
+import time
 
 class Neuron():
     def __init__(self, numInputs = 0):
@@ -78,6 +79,7 @@ class Brain():
         self.layers = []
         self.sizes = sizes
         self.initLayers()
+        self.t = 0
         
     def __str__(self):
         
@@ -145,10 +147,14 @@ class Brain():
     
     
     def backPropagate(self, xs, ys):
-        # Iterates over each pair in the training data
+        # Gets the weights between layers
+        weightsToNextLayer = {}
+        for i in range(len(self.layers) - 2, -1, -1):
+            weightsToNextLayer[i] = self.getWeightsBetweenLayers(self.layers[i+1], self.layers[i])
+        
+        # Iterates over each pair of inputs and outputs in the training data
         for idx in range(len(xs)):
             pred = self.classify(xs[idx])
-            weightsToNextLayer = self.getWeightsBetweenLayers(self.layers[-1], self.layers[-2])
             
             # Holds the derivative of the loss with respect to the stimulus for the neurons
             # in the current layer
@@ -164,9 +170,7 @@ class Brain():
             
             # Finds the gradients for each weight and bias in the hidden layers
             for i in range(len(self.layers) - 2, -1, -1):
-                currentLayerGrad = self.updateGradForCurrentLayer(self.layers[i], self.layers[i+1], currentLayerGrad, weightsToNextLayer)
-                if i > 0:
-                    weightsToNextLayer = self.getWeightsBetweenLayers(self.layers[i], self.layers[i-1])
+                currentLayerGrad = self.updateGradForCurrentLayer(self.layers[i], self.layers[i+1], currentLayerGrad, weightsToNextLayer[i])
                 
     def updateGradForCurrentLayer(self, layer, nextLayer, nextLayerGrad, weightsToNextLayer):
         currentLayerGrad = [0 for _ in range(layer.size)]
@@ -184,10 +188,13 @@ class Brain():
         
     
     def getWeightsBetweenLayers(self, currentLayer, prevLayer):
+        s = time.time()
         weightsToNextLayer = [[0 for _ in range(currentLayer.size)] for _ in range(prevLayer.size)]
         for i, neuron in enumerate(currentLayer.neurons):
             for j in range(len(prevLayer.neurons)):
                 weightsToNextLayer[j][i] = neuron.weights[j]
+        e = time.time()
+        self.t += (e - s)
         return weightsToNextLayer
     
     def applyGradients(self, learnRate):

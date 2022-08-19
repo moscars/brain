@@ -13,7 +13,7 @@ xs = [
 
 ys = [[1, 0], [0, 1], [0, 1], [1, 0], [1, 0]]
 
-brain.learn(10000, 0.01, xs, ys)
+brain.learn(20000, 0.01, xs, ys)
 
 for x, y in zip(xs, ys):
     print([round(pred, 2) for pred in brain.classify(x)], y)

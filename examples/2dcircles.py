@@ -4,17 +4,14 @@ from neuralnetwork import Brain
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-import time
-
-start_time = time.time()
 
 # Example inspired by karpathy/micrograd
 np.random.seed(900)
 random.seed(900)
 
 # make up a dataset
-from sklearn.datasets import make_moons, make_blobs
-X, y = make_moons(n_samples=100, noise=0.1)
+from sklearn.datasets import make_circles
+X, y = make_circles(noise=0.2, factor=0.5, random_state=1)
 
 newY = []
 for _y in y:
@@ -26,10 +23,9 @@ for _y in y:
 # visualize in 2D
 plt.figure(figsize=(5,5))
 plt.scatter(X[:,0], X[:,1], c=y, s=20, cmap='jet')
-#plt.show()
 
 brain = Brain([2, 8, 8, 2])
-brain.learn(2000, 0.002, X, newY)
+brain.learn(3000, 0.002, X, newY)
 
 h = 0.05
 x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
@@ -47,15 +43,4 @@ plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral, alpha=0.8)
 plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.Spectral)
 plt.xlim(xx.min(), xx.max())
 plt.ylim(yy.min(), yy.max())
-
-end_time = time.time()
-
-
-totTime = end_time - start_time
-
-print(brain.t)
-print(totTime)
-print(brain.t / totTime)
-
 plt.show()
-
