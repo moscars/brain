@@ -2,9 +2,8 @@ from cmath import tanh, cosh
 import random
 
 class Neuron():
-    def __init__(self, idx, bias = 0, numInputs = 0):
-        self.id = idx
-        self.bias = bias
+    def __init__(self, numInputs = 0):
+        self.bias = random.uniform(-1, 1)
         self.numInputs = numInputs
         self.inputs = [0 for _ in range(numInputs)]
         self.weights = [random.uniform(-1, 1) for _ in range(numInputs)]
@@ -36,7 +35,6 @@ class Neuron():
         return self.activationFunction(self.stimulus)
     
     def applyGradients(self, learnRate):
-        
         for i in range(len(self.weights)):
             self.weights[i] -= self.grad[i] * learnRate
         self.bias -= self.biasGrad * learnRate
@@ -60,9 +58,8 @@ class Layer():
         return '\n'.join(out)
     
     def initNeurons(self):
-        seed = random.randint(0, 10000)
-        for k in range(self.size):
-            self.neurons.append(Neuron(seed + k, 0, self.numInNeurons))
+        for _ in range(self.size):
+            self.neurons.append(Neuron(self.numInNeurons))
         
     def classify(self, inputSignals):
         assert(len(inputSignals) == self.numInNeurons)
@@ -207,30 +204,18 @@ class Brain():
                 print(round(num, 3), end=" ")
             print()
 
-    def learn(self, runs, xs, ys):
-        for _ in range(runs):
+    def learn(self, runs, learnRate, xs, ys, printPred = False):
+        for k in range(runs):
             ypred = [self.classify(x) for x in xs]
             
             loss = self.getLoss([self.getLocalLoss(ypred[i], ys[i]) for i in range(len(ypred))])
             #self.getGradByDefinition(xs, ypred, ys)
             self.backPropagate(xs, ys)
 
-            # Backpro
-            self.applyGradients(0.05)
+            # Backprop
+            self.applyGradients(learnRate)
             self.zeroGradients()
             
-            print(loss)
-            self.printOut(ypred)
-
-brain = Brain([3, 6, 4, 2])
-xs = [
-    [2.0, 3.0, -1.0],
-    [2.0, -1.0, 0.5],
-    [0.5, 1.0, 1.0],
-    [1.0, 1.0, -1.0],
-    [2.0, 2.0, 0.7]
-]
-
-ys = [[1, 0], [0, 1], [0, 1], [1, 0], [1, 0]]
-
-brain.learn(5000, xs, ys)
+            print("Iteration: {}, Loss: {}".format(k, loss))
+            if printPred:
+                self.printOut(ypred)
