@@ -1,16 +1,17 @@
 import sys 
 sys.path.append('..')
-from ann import Brain
+from neuralnetwork import Brain
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 
-np.random.seed(950)
-random.seed(950)
+# Example inspired by karpathy/micrograd
+np.random.seed(900)
+random.seed(900)
 
 # make up a dataset
-from sklearn.datasets import make_circles
-X, y = make_circles(noise=0.2, factor=0.5, random_state=1)
+from sklearn.datasets import make_moons
+X, y = make_moons(n_samples=100, noise=0.1)
 
 newY = []
 for _y in y:
@@ -24,8 +25,8 @@ plt.figure(figsize=(5,5))
 plt.scatter(X[:,0], X[:,1], c=y, s=20, cmap='jet')
 
 # learn
-brain = Brain([2, 5, 4, 2], "Sigmoid")
-brain.learn(1000, 0.05, X, newY, 20)
+brain = Brain([2, 8, 8, 2], "Hyp tan")
+brain.learn(400, 0.05, X, newY, 20)
 
 # visualize decision boundary
 h = 0.05
@@ -44,4 +45,6 @@ plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral, alpha=0.8)
 plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.Spectral)
 plt.xlim(xx.min(), xx.max())
 plt.ylim(yy.min(), yy.max())
+
 plt.show()
+

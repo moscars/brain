@@ -25,9 +25,9 @@ def getXVals(prevX):
         newX.append(newInput)
     return newX
 
-brain = Brain([784, 100, 10], "Sigmoid")
+brain = Brain([784, 10], "Sigmoid")
 
 xIn = getXVals(x_train)
 yIn = getYVals(y_train)
 
-brain.learn(100, 0.001, xIn, yIn, 100)
+brain.learn(100, 0.003, xIn, yIn, 50)

@@ -133,15 +133,15 @@ class Brain():
                 print(round(num, 3), end=" ")
             print()
 
-    def learn(self, runs, learnRate, xs, ys, batchSize = None):
-        for k in range(runs):
-            
+    def learn(self, epochs, learnRate, xs, ys, batchSize = None):
+        
+        for epoch in range(epochs):
             if batchSize is None:
                 # learn on all examples each run
                 batchSize = len(xs)
             
             numBatchRuns = len(xs) // batchSize
-            twenthyLastAverage = []
+            hundredLastAverage = []
             
             combine = list(zip(xs, ys))
             random.shuffle(combine)
@@ -161,7 +161,6 @@ class Brain():
                 
                 loss = self.getLoss([self.getLocalLoss(ypred[i], sampleYs[i]) for i in range(len(ypred))])
                 
-                #self.getGradByDefinition(sampleXs, ypred, sampleYs)
                 self.backpropagate(sampleXs, sampleYs)
 
                 # Backprop
@@ -169,11 +168,11 @@ class Brain():
                 self.zeroGradients()
                 
                 accuracy = int(self.getCorrectClassifications(ypred, sampleYs) * 100)
-                twenthyLastAverage.append(accuracy)
-                if(len(twenthyLastAverage) > 20):
-                    twenthyLastAverage.pop(0)
-                print("Iteration: {} {}, Loss: {}".format(k, batchRun, loss))
-                print("Accuracy this batch: {}%, Average last 20 batches: {}%".format(accuracy, int(sum(twenthyLastAverage) / len(twenthyLastAverage))))
+                hundredLastAverage.append(accuracy)
+                if(len(hundredLastAverage) > 100):
+                    hundredLastAverage.pop(0)
+                print("Iteration: {} {}, Loss: {}".format(epoch, batchRun, loss))
+                print("Accuracy this batch: {}%, Average last 100: {}%".format(accuracy, int(sum(hundredLastAverage) / len(hundredLastAverage))))
     
     def getCorrectClassifications(self, ypred, ys):
         correct = 0
