@@ -1,6 +1,6 @@
 import sys 
 sys.path.append('..')
-from neuralnetwork import Brain
+from ann import Brain
 import numpy as np
 import matplotlib.pyplot as plt
 import random
