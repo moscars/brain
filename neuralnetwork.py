@@ -46,7 +46,7 @@ class Brain():
         return sum([sum(x) for x in localLosses])
     
     # Gets the gradient for each weight and bias by
-    # using the definition of the derivative (Not used)
+    # using the definition of the derivative (Only used for testing)
     def getGradByDefinition(self, xs, ypred, ys):
         h = 0.0001
         for idx in range(len(xs)):
@@ -126,15 +126,8 @@ class Brain():
     def zeroGradients(self):
         for layer in self.layers:
             layer.zeroGradients()
-    
-    def printOut(self, out):
-        for row in out:
-            for num in row:
-                print(round(num, 3), end=" ")
-            print()
 
     def learn(self, epochs, learnRate, xs, ys, batchSize = None):
-        
         for epoch in range(epochs):
             if batchSize is None:
                 # learn on all examples each run
@@ -167,14 +160,14 @@ class Brain():
                 self.applyGradients(learnRate)
                 self.zeroGradients()
                 
-                accuracy = int(self.getCorrectClassifications(ypred, sampleYs) * 100)
+                accuracy = int(self.getCurrentAccuracy(ypred, sampleYs) * 100)
                 hundredLastAverage.append(accuracy)
                 if(len(hundredLastAverage) > 100):
                     hundredLastAverage.pop(0)
                 print("Iteration: {} {}, Loss: {}".format(epoch, batchRun, loss))
                 print("Accuracy this batch: {}%, Average last 100: {}%".format(accuracy, int(sum(hundredLastAverage) / len(hundredLastAverage))))
     
-    def getCorrectClassifications(self, ypred, ys):
+    def getCurrentAccuracy(self, ypred, ys):
         correct = 0
         for yp, yc in zip(ypred, ys):
             largestIndex = 0
