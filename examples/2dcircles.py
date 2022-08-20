@@ -25,7 +25,7 @@ plt.scatter(X[:,0], X[:,1], c=y, s=20, cmap='jet')
 
 # learn
 brain = Brain([2, 5, 4, 2], "Sigmoid")
-brain.learn(2000, 0.05, X, newY, 20)
+brain.learn(1000, 0.05, X, newY, 20)
 
 # visualize decision boundary
 h = 0.05

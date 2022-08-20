@@ -2,7 +2,7 @@ import sys
 sys.path.append('..')
 from neuralnetwork import Brain
 
-brain = Brain([3, 6, 4, 2])
+brain = Brain([3, 6, 4, 2], "Hyp tan")
 xs = [
     [2.0, 3.0, -1.0],
     [2.0, -1.0, 0.5],
@@ -13,7 +13,9 @@ xs = [
 
 ys = [[1, 0], [0, 1], [0, 1], [1, 0], [1, 0]]
 
-brain.learn(20000, 0.01, xs, ys)
+brain.learn(2000, 0.01, xs, ys)
 
+print()
+print("Final predictions:")
 for x, y in zip(xs, ys):
     print([round(pred, 2) for pred in brain.classify(x)], y)

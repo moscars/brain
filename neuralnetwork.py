@@ -1,7 +1,6 @@
 import math
 from cmath import tanh, cosh
 import random
-import time
 
 class Neuron():
     def __init__(self, activation, numInputs = 0):
@@ -40,33 +39,10 @@ class Neuron():
         return actDerivative
         
     def activationFunction(self, stimulus):
-        
         return self.activationOptions[self.activationToUse](stimulus)
-        #return tanh(stimulus).real
-        #print(stimulus)
-        
-        return 1 / (1 + math.exp(-1 * stimulus))
-        
-        exp = math.exp(stimulus)
-        
-        return exp / (exp + 1)
-        
-        #return 1 / (1+math.exp(-1 * stimulus))
 
     def activationDerivative(self, stimulus):
-        #print(stimulus)
-        #return 1 / (cosh(stimulus).real ** 2)
         return self.activationDerivativeOptions[self.activationToUse](stimulus)
-        
-        activation = self.activationFunction(stimulus)
-        
-        return activation * (1 - activation)
-        
-        exp = math.exp(stimulus)
-        
-        return exp / ((1 + exp) ** 2)
-        
-        #return math.exp(-1 * stimulus) / ((1 + math.exp(-1 * stimulus)) ** 2)
     
     def fire(self, inputSignals):
         self.stimulus = 0
@@ -122,7 +98,6 @@ class Brain():
         self.initLayers(activation)
         
     def __str__(self):
-        
         out = ["Brain: "]
         for layer in self.layers:
             out.append(layer.__str__())
@@ -161,7 +136,7 @@ class Brain():
         return sum([sum(x) for x in localLosses])
     
     # Gets the gradient for each weight and bias by
-    # using the definition of the derivative
+    # using the definition of the derivative (Not used)
     def getGradByDefinition(self, xs, ypred, ys):
         h = 0.0001
         for idx in range(len(xs)):
@@ -175,18 +150,18 @@ class Brain():
                         self.layers[layerIdx].neurons[neuronIdx].weights[weightIdx] -= h
                         lossh = self.getLocalLoss(ypred2, ys[idx])
                         totLossfplush = sum(lossh)
-                        self.layers[layerIdx].neurons[neuronIdx].definitionGrad[weightIdx] += (totLossfplush - totLossf) / h
+                        self.layers[layerIdx].neurons[neuronIdx].grad[weightIdx] += (totLossfplush - totLossf) / h
 
-                    '''
+                    
                     self.layers[layerIdx].neurons[neuronIdx].bias += h
                     ypred2 = self.classify(xs[idx])
                     self.layers[layerIdx].neurons[neuronIdx].bias -= h
                     lossh = self.getLocalLoss(ypred2, ys[idx])
                     totLossfplush = sum(lossh)
-                    self.layers[layerIdx].neurons[neuronIdx].biasGrad += (totLossfplush - totLossf) / h'''
+                    self.layers[layerIdx].neurons[neuronIdx].biasGrad += (totLossfplush - totLossf) / h
     
-    
-    def backPropagate(self, xs, ys):
+    # Get the gradients for each parameter more efficently with the backpropagation algorithm
+    def backpropagate(self, xs, ys):
         # Gets the weights between layers
         weightsToNextLayer = {}
         for i in range(len(self.layers) - 2, -1, -1):
@@ -248,7 +223,7 @@ class Brain():
                 print(round(num, 3), end=" ")
             print()
 
-    def learn(self, runs, learnRate, xs, ys, batchSize = None, printPred = False):
+    def learn(self, runs, learnRate, xs, ys, batchSize = None):
         for k in range(runs):
             
             if batchSize is None:
@@ -261,11 +236,14 @@ class Brain():
             combine = list(zip(xs, ys))
             random.shuffle(combine)
             
+            # Uses batching to increase the learning speed
+            # The network learns on a small set of examples
+            # and thus gets to update its parameters more often
+            # although with more noisy gradients
             for batchRun in range(numBatchRuns):
                 sampleXs = []
                 sampleYs = []
-                if batchRun * batchSize + batchSize - 1 > len(combine): break
-                for index in range(batchRun * batchSize, batchRun * batchSize + batchSize):
+                for index in range(batchRun * batchSize, min(batchRun * batchSize + batchSize, len(combine))):
                     sampleXs.append(combine[index][0])
                     sampleYs.append(combine[index][1])
                     
@@ -274,7 +252,7 @@ class Brain():
                 loss = self.getLoss([self.getLocalLoss(ypred[i], sampleYs[i]) for i in range(len(ypred))])
                 
                 #self.getGradByDefinition(sampleXs, ypred, sampleYs)
-                self.backPropagate(sampleXs, sampleYs)
+                self.backpropagate(sampleXs, sampleYs)
 
                 # Backprop
                 self.applyGradients(learnRate)

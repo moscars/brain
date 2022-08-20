@@ -18,22 +18,16 @@ def getYVals(prevY):
     return newY
 
 def getXVals(prevX):
-    #flatten input from a 2d array to a 1d array
     newX = []
     for x in prevX:
-        newInput = []
-        for row in x:
-            for val in row:
-                newInput.append(val / 255)
+        newInput = x.flatten()
+        newInput = list(map(lambda x: x / 255, newInput))
         newX.append(newInput)
-    return newX 
+    return newX
 
 brain = Brain([784, 100, 10], "Sigmoid")
-
 
 xIn = getXVals(x_train)
 yIn = getYVals(y_train)
 
-print("Starting to learn")
-
-brain.learn(100, 0.003, xIn, yIn, 100)
+brain.learn(100, 0.001, xIn, yIn, 100)
