@@ -1,17 +1,24 @@
+import math
 from cmath import tanh, cosh
 import random
 import time
 
 class Neuron():
-    def __init__(self, numInputs = 0):
+    def __init__(self, activation, numInputs = 0):
         self.bias = random.uniform(-1, 1)
         self.numInputs = numInputs
         self.inputs = [0 for _ in range(numInputs)]
-        self.weights = [random.uniform(-1, 1) for _ in range(numInputs)]
+        self.weights = [random.uniform(-1, 1) / math.sqrt(numInputs) for _ in range(numInputs)]
         self.grad = [0 for _ in range(numInputs)]
         self.definitionGrad = [0 for _ in range(numInputs)]
         self.biasGrad = 0
         self.stimulus = 0
+        self.activationOptions = {
+            "Sigmoid": lambda x: 1 / (1 + math.exp(-1 * x)),
+            "Hyp tan": lambda x: tanh(x).real
+        }
+        self.activationDerivativeOptions = self.initActivationDerivative()
+        self.activationToUse = activation
     
     def __str__(self):
         out = "Neuron\n"
@@ -20,12 +27,46 @@ class Neuron():
         for weight in self.weights:
             out += str(weight) + "\n"
         return out
+    
+    def initActivationDerivative(self):
+        actDerivative = {}
+        
+        def sig(x):
+            activation = self.activationOptions["Sigmoid"](x)
+            return activation * (1 - activation)
+        
+        actDerivative["Sigmoid"] = sig
+        actDerivative["Hyp tan"] = lambda x: 1 / (cosh(x).real ** 2)
+        return actDerivative
         
     def activationFunction(self, stimulus):
-        return tanh(stimulus).real
+        
+        return self.activationOptions[self.activationToUse](stimulus)
+        #return tanh(stimulus).real
+        #print(stimulus)
+        
+        return 1 / (1 + math.exp(-1 * stimulus))
+        
+        exp = math.exp(stimulus)
+        
+        return exp / (exp + 1)
+        
+        #return 1 / (1+math.exp(-1 * stimulus))
 
     def activationDerivative(self, stimulus):
-        return 1 / (cosh(stimulus).real ** 2)
+        #print(stimulus)
+        #return 1 / (cosh(stimulus).real ** 2)
+        return self.activationDerivativeOptions[self.activationToUse](stimulus)
+        
+        activation = self.activationFunction(stimulus)
+        
+        return activation * (1 - activation)
+        
+        exp = math.exp(stimulus)
+        
+        return exp / ((1 + exp) ** 2)
+        
+        #return math.exp(-1 * stimulus) / ((1 + math.exp(-1 * stimulus)) ** 2)
     
     def fire(self, inputSignals):
         self.stimulus = 0
@@ -46,11 +87,11 @@ class Neuron():
         self.biasGrad = 0
     
 class Layer():
-    def __init__(self, numInNeurons, size):
+    def __init__(self, numInNeurons, size, activation):
         self.size = size
         self.numInNeurons = numInNeurons
         self.neurons = []
-        self.initNeurons()
+        self.initNeurons(activation)
     
     def __str__(self):
         out = ["Layer with {} inputs and {} outputs:".format(self.numInNeurons, self.size)]
@@ -58,9 +99,9 @@ class Layer():
             out.append(neuron.__str__())
         return '\n'.join(out)
     
-    def initNeurons(self):
+    def initNeurons(self, activation):
         for _ in range(self.size):
-            self.neurons.append(Neuron(self.numInNeurons))
+            self.neurons.append(Neuron(activation, self.numInNeurons))
         
     def classify(self, inputSignals):
         assert(len(inputSignals) == self.numInNeurons)
@@ -75,11 +116,10 @@ class Layer():
             neuron.zeroGradients()
     
 class Brain():
-    def __init__(self, sizes):
+    def __init__(self, sizes, activation):
         self.layers = []
         self.sizes = sizes
-        self.initLayers()
-        self.t = 0
+        self.initLayers(activation)
         
     def __str__(self):
         
@@ -88,11 +128,11 @@ class Brain():
             out.append(layer.__str__())
         return '\n'.join(out)
             
-    def initLayers(self):
+    def initLayers(self, activation):
         inputs = self.sizes[0]
         for i in range(1, len(self.sizes)):
             outputs = self.sizes[i]
-            self.layers.append(Layer(inputs, outputs))
+            self.layers.append(Layer(inputs, outputs, activation))
             inputs = outputs
     
     def classify(self, inputSignals):
@@ -135,15 +175,15 @@ class Brain():
                         self.layers[layerIdx].neurons[neuronIdx].weights[weightIdx] -= h
                         lossh = self.getLocalLoss(ypred2, ys[idx])
                         totLossfplush = sum(lossh)
-                        self.layers[layerIdx].neurons[neuronIdx].grad[weightIdx] += (totLossfplush - totLossf) / h
+                        self.layers[layerIdx].neurons[neuronIdx].definitionGrad[weightIdx] += (totLossfplush - totLossf) / h
 
-                    
+                    '''
                     self.layers[layerIdx].neurons[neuronIdx].bias += h
                     ypred2 = self.classify(xs[idx])
                     self.layers[layerIdx].neurons[neuronIdx].bias -= h
                     lossh = self.getLocalLoss(ypred2, ys[idx])
                     totLossfplush = sum(lossh)
-                    self.layers[layerIdx].neurons[neuronIdx].biasGrad += (totLossfplush - totLossf) / h
+                    self.layers[layerIdx].neurons[neuronIdx].biasGrad += (totLossfplush - totLossf) / h'''
     
     
     def backPropagate(self, xs, ys):
@@ -188,13 +228,10 @@ class Brain():
         
     
     def getWeightsBetweenLayers(self, currentLayer, prevLayer):
-        s = time.time()
         weightsToNextLayer = [[0 for _ in range(currentLayer.size)] for _ in range(prevLayer.size)]
         for i, neuron in enumerate(currentLayer.neurons):
             for j in range(len(prevLayer.neurons)):
                 weightsToNextLayer[j][i] = neuron.weights[j]
-        e = time.time()
-        self.t += (e - s)
         return weightsToNextLayer
     
     def applyGradients(self, learnRate):
@@ -211,18 +248,60 @@ class Brain():
                 print(round(num, 3), end=" ")
             print()
 
-    def learn(self, runs, learnRate, xs, ys, printPred = False):
+    def learn(self, runs, learnRate, xs, ys, batchSize = None, printPred = False):
         for k in range(runs):
-            ypred = [self.classify(x) for x in xs]
             
-            loss = self.getLoss([self.getLocalLoss(ypred[i], ys[i]) for i in range(len(ypred))])
-            #self.getGradByDefinition(xs, ypred, ys)
-            self.backPropagate(xs, ys)
+            if batchSize is None:
+                # learn on all examples each run
+                batchSize = len(xs)
+            
+            numBatchRuns = len(xs) // batchSize
+            twenthyLastAverage = []
+            
+            combine = list(zip(xs, ys))
+            random.shuffle(combine)
+            
+            for batchRun in range(numBatchRuns):
+                sampleXs = []
+                sampleYs = []
+                if batchRun * batchSize + batchSize - 1 > len(combine): break
+                for index in range(batchRun * batchSize, batchRun * batchSize + batchSize):
+                    sampleXs.append(combine[index][0])
+                    sampleYs.append(combine[index][1])
+                    
+                ypred = [self.classify(x) for x in sampleXs]
+                
+                loss = self.getLoss([self.getLocalLoss(ypred[i], sampleYs[i]) for i in range(len(ypred))])
+                
+                #self.getGradByDefinition(sampleXs, ypred, sampleYs)
+                self.backPropagate(sampleXs, sampleYs)
 
-            # Backprop
-            self.applyGradients(learnRate)
-            self.zeroGradients()
+                # Backprop
+                self.applyGradients(learnRate)
+                self.zeroGradients()
+                
+                accuracy = int(self.getCorrectClassifications(ypred, sampleYs) * 100)
+                twenthyLastAverage.append(accuracy)
+                if(len(twenthyLastAverage) > 20):
+                    twenthyLastAverage.pop(0)
+                print("Iteration: {} {}, Loss: {}".format(k, batchRun, loss))
+                print("Accuracy this batch: {}%, Average last 20 batches: {}%".format(accuracy, int(sum(twenthyLastAverage) / len(twenthyLastAverage))))
+    
+    def getCorrectClassifications(self, ypred, ys):
+        correct = 0
+        for yp, yc in zip(ypred, ys):
+            largestIndex = 0
+            #check which output neuron fires the strongest
+            largest = 0
+            truthIndex = 0
+            for i in range(len(yp)):
+                if yp[i] > largest:
+                    largest = yp[i]
+                    largestIndex = i
+                if yc[i] == 1:
+                    truthIndex = i
+            if largestIndex == truthIndex:
+                correct += 1
+        
+        return correct / len(ypred)
             
-            print("Iteration: {}, Loss: {}".format(k, loss))
-            if printPred:
-                self.printOut(ypred)

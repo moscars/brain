@@ -5,9 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
-# Example inspired by karpathy/micrograd
-np.random.seed(900)
-random.seed(900)
+np.random.seed(950)
+random.seed(950)
 
 # make up a dataset
 from sklearn.datasets import make_circles
@@ -24,9 +23,11 @@ for _y in y:
 plt.figure(figsize=(5,5))
 plt.scatter(X[:,0], X[:,1], c=y, s=20, cmap='jet')
 
-brain = Brain([2, 8, 8, 2])
-brain.learn(3000, 0.002, X, newY)
+# learn
+brain = Brain([2, 5, 4, 2], "Sigmoid")
+brain.learn(2000, 0.05, X, newY, 20)
 
+# visualize decision boundary
 h = 0.05
 x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
 y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
